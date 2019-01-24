@@ -1,0 +1,84 @@
+global proc createPartioEmitter() 
+{
+	// create emitter node
+	string $emitterNode = `createNode PartioEmitterNode -name "PartioEmitter1"`;
+
+	// create nParticle object 
+	string $nParticlesNodes[] = `nParticle`;
+	
+    string $nucleusConnection[] = `connectionInfo -destinationFromSource ($nParticlesNodes[1] + ".currentState")`;
+    string $nucleusNode = `plugNode $nucleusConnection[0]`;
+	
+	setAttr ($nucleusNode + ".enable") 0;
+		
+	setAttr ($nParticlesNodes[1] + ".collide") 0;
+	setAttr ($nParticlesNodes[1] + ".forcesInWorld") 0;
+	
+	setAttr ($nParticlesNodes[1] + ".particleRenderType") 4;
+	setAttr ($nParticlesNodes[1] + ".colorInput") 3;
+	setAttr ($nParticlesNodes[1] + ".colorInputMax") 30;
+
+	setAttr ($nParticlesNodes[1] + ".color[0].color_Color") -type double3 0.0086 0.1954 0.4398;
+	setAttr ($nParticlesNodes[1] + ".color[1].color_Color") -type double3 1 1 1;
+	setAttr ($nParticlesNodes[1] + ".color[1].color_Position") 1;
+	setAttr ($nParticlesNodes[1] + ".color[1].color_Interp") 2;
+	
+	addAttr -ln "userScalar0"  -dt doubleArray  $nParticlesNodes[1];
+	addAttr -ln "userScalar"  -dt doubleArray  $nParticlesNodes[1];	
+	
+	setAttr -type "string" ($nParticlesNodes[1] + ".aiExportAttributes") userScalar;
+	
+	createAndAssignShader aiStandardSurface "";
+	
+	string $shadingGroup[] = `listConnections -type "shadingEngine" $nParticlesNodes[1]`;
+	
+	string $shader[] = `listConnections -d off -s on $shadingGroup[0]`;
+
+	string $rampNode = `shadingNode -asTexture ramp`;
+	setAttr ($rampNode + ".type") 1;
+	setAttr ($rampNode + ".colorEntryList[0].color") -type double3 0 0.18 0.635 ;
+	setAttr ($rampNode + ".colorEntryList[1].color") -type double3 1 1 1 ;
+	setAttr ($rampNode + ".colorEntryList[1].position") 1;
+	setAttr ($rampNode + ".interpolation") 4;
+	
+	connectAttr -f ($rampNode + ".outColor") ($shader[0] + ".baseColor");
+	
+	string $userDataNode = `shadingNode -asUtility aiUserDataFloat`;
+	
+	connectAttr -f ($userDataNode + ".outValue") ($rampNode + ".uCoord");
+	
+	setAttr -type "string" ($userDataNode + ".attribute") "userScalar";
+	setAttr -type "string" ($emitterNode + ".attributeName") "velocity";
+	setAttr ($emitterNode + ".minVal") 0.0;
+	setAttr ($emitterNode + ".maxVal") 5.0;
+	
+	// connect particles to emitter
+	connectDynamic -em $emitterNode $nParticlesNodes[0];
+	
+	setAttr ($nParticlesNodes[1] + ".radius") 0.025;
+	
+	expression -s ("int $cTime = `currentTime -q`;\n" + $emitterNode + ".frameIndex = $cTime;")  -o $emitterNode -ae 1 -uc all;
+	
+	select -r $emitterNode;
+}
+
+global proc createPartioVisualizer() 
+{
+	string $visNode = `createNode PartioVisualizerNode -name "PartioVisualizer1"`;
+	expression -s ("int $cTime = `currentTime -q`;\n" + $visNode + ".frameIndex = $cTime;")  -o $visNode -ae 1 -uc all;
+}
+
+global proc MPT_RemoveEditorTemplate(string $typeName)
+{
+	string $layouts[]=`lsUI -cl`;
+	string $layout_elem;
+	for ($layout_elem in $layouts)
+	{
+		string $layoutName = "AttrEd" + $typeName + "FormLayout";
+		if ($layout_elem == $layoutName)
+		{
+			deleteUI -lay $layoutName;
+			break;
+		}
+	}
+}

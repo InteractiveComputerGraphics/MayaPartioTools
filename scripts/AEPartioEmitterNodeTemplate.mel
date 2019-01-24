@@ -1,0 +1,17 @@
+global proc AEPartioEmitterNodeTemplate( string $nodeName )
+{
+	editorTemplate -beginLayout "Global" -collapse 0;
+	editorTemplate -addControl "particleFile";
+	editorTemplate -addControl "frameIndex";
+	editorTemplate -l "Attr. used for coloring" -addControl "attributeName";	
+	editorTemplate -addControl "minVal";
+	editorTemplate -addControl "maxVal";
+	editorTemplate -addControl "removeParticles";	
+	editorTemplate -addControl "nucleusFix";
+	editorTemplate -endLayout;
+
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}

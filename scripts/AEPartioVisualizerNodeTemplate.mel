@@ -1,0 +1,18 @@
+global proc AEPartioVisualizerNodeTemplate( string $nodeName )
+{
+	editorTemplate -beginLayout "Global" -collapse 0;
+	editorTemplate -addControl "particleFile";
+	editorTemplate -addControl "radius";
+	editorTemplate -addControl "frameIndex";
+	editorTemplate -l "Attr. used for coloring" -addControl "attributeName";	
+	editorTemplate -addControl "minVal";
+	editorTemplate -addControl "maxVal";
+	editorTemplate -addControl "colorMapType";
+	editorTemplate -l "Base color" -addControl "color";
+	editorTemplate -endLayout;
+
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}
