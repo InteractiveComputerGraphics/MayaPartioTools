@@ -169,6 +169,9 @@ MHWRender::DrawAPI PartioVisualizerDrawOverride::supportedDrawAPIs() const
 
 void PartioVisualizerDrawOverride::drawSpheres() const
 {
+	if (m_visualizer->m_partioData == nullptr)
+		return;
+
 	// Draw simulation model
 	const unsigned int nParticles = m_visualizer->m_partioData->numParticles();
 	if (nParticles == 0)
