@@ -26,28 +26,38 @@ global proc createPartioEmitter()
 	addAttr -ln "userScalar0"  -dt doubleArray  $nParticlesNodes[1];
 	addAttr -ln "userScalar"  -dt doubleArray  $nParticlesNodes[1];	
 	
-	setAttr -type "string" ($nParticlesNodes[1] + ".aiExportAttributes") userScalar;
+	int $foundArnold = `pluginInfo -query -l mtoa`;
 	
-	createAndAssignShader aiStandardSurface "";
+	if ($foundArnold)
+	{
+		setAttr -type "string" ($nParticlesNodes[1] + ".aiExportAttributes") userScalar;
 	
-	string $shadingGroup[] = `listConnections -type "shadingEngine" $nParticlesNodes[1]`;
+		createAndAssignShader aiStandardSurface "";
 	
-	string $shader[] = `listConnections -d off -s on $shadingGroup[0]`;
+		string $shadingGroup[] = `listConnections -type "shadingEngine" $nParticlesNodes[1]`;
+	
+		string $shader[] = `listConnections -d off -s on $shadingGroup[0]`;
 
-	string $rampNode = `shadingNode -asTexture ramp`;
-	setAttr ($rampNode + ".type") 1;
-	setAttr ($rampNode + ".colorEntryList[0].color") -type double3 0 0.18 0.635 ;
-	setAttr ($rampNode + ".colorEntryList[1].color") -type double3 1 1 1 ;
-	setAttr ($rampNode + ".colorEntryList[1].position") 1;
-	setAttr ($rampNode + ".interpolation") 4;
+		string $rampNode = `shadingNode -asTexture ramp`;
+		setAttr ($rampNode + ".type") 1;
+		setAttr ($rampNode + ".colorEntryList[0].color") -type double3 0 0.18 0.635 ;
+		setAttr ($rampNode + ".colorEntryList[1].color") -type double3 1 1 1 ;
+		setAttr ($rampNode + ".colorEntryList[1].position") 1;
+		setAttr ($rampNode + ".interpolation") 4;
 	
-	connectAttr -f ($rampNode + ".outColor") ($shader[0] + ".baseColor");
+		connectAttr -f ($rampNode + ".outColor") ($shader[0] + ".baseColor");
 	
-	string $userDataNode = `shadingNode -asUtility aiUserDataFloat`;
+		string $userDataNode = `shadingNode -asUtility aiUserDataFloat`;
 	
-	connectAttr -f ($userDataNode + ".outValue") ($rampNode + ".uCoord");
+		connectAttr -f ($userDataNode + ".outValue") ($rampNode + ".uCoord");
+		
+		setAttr -type "string" ($userDataNode + ".attribute") "userScalar";
+	}
+	else
+	{
+		print("Shaders are not created since the arnold plugin was not loaded.");
+	}
 	
-	setAttr -type "string" ($userDataNode + ".attribute") "userScalar";
 	setAttr -type "string" ($emitterNode + ".attributeName") "velocity";
 	setAttr ($emitterNode + ".minVal") 0.0;
 	setAttr ($emitterNode + ".maxVal") 5.0;
