@@ -210,6 +210,8 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 	int frameIndex = block.inputValue(m_frameIndex).asInt();
 
 	std::string currentFile = convertFileName(particleFile.asChar(), frameIndex);
+	if (currentFile == "")
+		return (MS::kFailure);
 	std::cout << "Current file: " << currentFile << "\n";
 
 	bool nucleusFix = block.inputValue(m_nucleusFixAttr).asBool();
@@ -482,7 +484,7 @@ std::string PartioEmitter::convertFileName(const std::string &inputFileName, con
 	if (pos1 == std::string::npos)
 	{
 		std::cerr << "# missing in file name.\n";
-		exit(1);
+		return "";
 	}
 	std::string::size_type pos2 = fileName.find_first_not_of("#", pos1);
 	std::string::size_type length = pos2 - pos1;

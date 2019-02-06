@@ -183,6 +183,8 @@ MStatus PartioVisualizer::compute( const MPlug& plug, MDataBlock& block)
 		{
 			MString particleFile = block.inputValue(m_particleFile).asString();
 			std::string currentFile = convertFileName(particleFile.asChar(), frameIndex);
+			if (currentFile == "")
+				return (MS::kFailure);
 			MGlobal::displayInfo(MString("Current file: ") + currentFile.c_str());
 
 			MString attrName = block.inputValue(m_attrName).asString();
@@ -244,7 +246,7 @@ std::string PartioVisualizer::convertFileName(const std::string &inputFileName, 
 	if (pos1 == std::string::npos)
 	{
 		std::cerr << "# missing in file name.\n";
-		exit(1);
+		return "";
 	}
 	std::string::size_type pos2 = fileName.find_first_not_of("#", pos1);
 	std::string::size_type length = pos2 - pos1;
@@ -307,6 +309,8 @@ void PartioVisualizer::attribteNameChangedCB(MNodeMessage::AttributeMessage msg,
 
 			MString particleFile = MPlug(visualizer->thisMObject(), PartioVisualizer::m_particleFile).asString();
 			std::string currentFile = visualizer->convertFileName(particleFile.asChar(), frameIndex);
+			if (currentFile == "")
+				return;
 			MGlobal::displayInfo(MString("Current file: ") + currentFile.c_str());
 
 			MString attrName = MPlug(visualizer->thisMObject(), PartioVisualizer::m_attrName).asString();
