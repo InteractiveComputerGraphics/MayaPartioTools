@@ -37,7 +37,8 @@ MObject PartioEmitter::m_activeAttr;
 MObject PartioEmitter::m_particleFileAttr;
 MObject PartioEmitter::m_removeParticlesAttr;
 MObject PartioEmitter::m_nucleusFixAttr;
-MObject PartioEmitter::m_attrName;
+MObject PartioEmitter::m_colorAttrName;
+MObject PartioEmitter::m_rotationAttrName;
 MObject PartioEmitter::m_minVal;
 MObject PartioEmitter::m_maxVal;
 MObject PartioEmitter::m_frameIndex;
@@ -98,13 +99,13 @@ MStatus PartioEmitter::initialize()
 	addAttribute(m_frameIndex);
 
 	defaultString = fnStringData.create("velocity");
-	m_attrName = tAttr.create("attributeName", "aName", MFnStringData::kString, defaultString);
+	m_colorAttrName = tAttr.create("colorAttributeName", "colorAttr", MFnStringData::kString, defaultString);
 	tAttr.setReadable(true);
 	tAttr.setWritable(true);
 	tAttr.setKeyable(false);
 	tAttr.setConnectable(true);
 	tAttr.setStorable(true);
-	addAttribute(m_attrName);
+	addAttribute(m_colorAttrName);
 
 	m_minVal = nAttr.create("minVal", "minV", MFnNumericData::kFloat, 0.0);
 	nAttr.setReadable(true);
@@ -121,6 +122,15 @@ MStatus PartioEmitter::initialize()
 	nAttr.setConnectable(true);
 	nAttr.setStorable(true);
 	addAttribute(m_maxVal);
+
+	defaultString = fnStringData.create("rotation");
+	m_rotationAttrName = tAttr.create("rotationAttributeName", "rotAttr", MFnStringData::kString, defaultString);
+	tAttr.setReadable(true);
+	tAttr.setWritable(true);
+	tAttr.setKeyable(false);
+	tAttr.setConnectable(true);
+	tAttr.setStorable(true);
+	addAttribute(m_rotationAttrName);
 
 	m_removeParticlesAttr = tAttr.create("removeParticles", "rmParticles", MFnStringData::kString);
 	tAttr.setReadable(true);
@@ -139,9 +149,10 @@ MStatus PartioEmitter::initialize()
 	addAttribute(m_nucleusFixAttr);
 
 	attributeAffects(m_particleFileAttr, mOutput);
-	attributeAffects(m_attrName, mOutput);
+	attributeAffects(m_colorAttrName, mOutput);
 	attributeAffects(m_minVal, mOutput);
 	attributeAffects(m_maxVal, mOutput);
+	attributeAffects(m_rotationAttrName, mOutput);
 	attributeAffects(m_frameIndex, mOutput);
 	attributeAffects(m_removeParticlesAttr, mOutput);
 
@@ -205,17 +216,21 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 
 	MVectorArray fnOutPos = fnOutput.vectorArray("position", &status);
 	MVectorArray fnOutVel = fnOutput.vectorArray("velocity", &status);
-	MDoubleArray fnOutUserScalar = fnOutput.doubleArray("userScalar", &status);
+	MDoubleArray fnOutUserScalarColor = fnOutput.doubleArray("userScalarColor", &status);
+	MVectorArray fnOutUserVectorRotation = fnOutput.vectorArray("userVectorRotation", &status);
 
 	int frameIndex = block.inputValue(m_frameIndex).asInt();
 
 	std::string currentFile = convertFileName(particleFile.asChar(), frameIndex);
+	if (currentFile == "")
+		return (MS::kFailure);
 	std::cout << "Current file: " << currentFile << "\n";
 
 	bool nucleusFix = block.inputValue(m_nucleusFixAttr).asBool();
 
-	MString attrName = block.inputValue(m_attrName).asString();
-	readParticles(currentFile, attrName.asChar());
+	MString colorAttrName = block.inputValue(m_colorAttrName).asString();
+	MString rotationAttrName = block.inputValue(m_rotationAttrName).asString();
+	readParticles(currentFile, colorAttrName.asChar(), rotationAttrName.asChar());
 
 	float minVal = block.inputValue(m_minVal).asFloat(); 
 	float maxVal = block.inputValue(m_maxVal).asFloat();
@@ -227,22 +242,27 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 	if (part.count() >= numParticles)
 	{
 		MVectorArray outX, outV;
-		MDoubleArray outUserScalar;
+		MDoubleArray outUserScalarColor;
+		MVectorArray outUserVectorRotation;
 		if (nucleusFix)
 		{
 			outX.setLength(part.count());
 			if (m_velAttr.attributeIndex != 0xffffffff)
 				outV.setLength(part.count());
-			if (m_userAttr.attributeIndex != 0xffffffff)
-				outUserScalar.setLength(part.count());
+			if (m_userColorAttr.attributeIndex != 0xffffffff)
+				outUserScalarColor.setLength(part.count());
+			if (m_userRotationAttr.attributeIndex != 0xffffffff)
+				outUserVectorRotation.setLength(part.count());
 		}
 		else
 		{
 			outX.setLength(numParticles);
 			if (m_velAttr.attributeIndex != 0xffffffff)
 				outV.setLength(numParticles);
-			if (m_userAttr.attributeIndex != 0xffffffff)
-				outUserScalar.setLength(numParticles);
+			if (m_userColorAttr.attributeIndex != 0xffffffff)
+				outUserScalarColor.setLength(numParticles);
+			if (m_userRotationAttr.attributeIndex != 0xffffffff)
+				outUserVectorRotation.setLength(numParticles);
 		}
 		unsigned int currentIndex = 0;
 		for (int i = 0; i < m_partioData->numParticles(); i++)
@@ -270,15 +290,32 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 				outV[currentIndex].z = vel[2];
 			}
 
-			if (m_userAttr.attributeIndex != 0xffffffff)
+			if (m_userColorAttr.attributeIndex != 0xffffffff)
 			{
-				const float *d = m_partioData->data<float>(m_userAttr, i);
-				if (m_userAttr.type == Partio::FLOAT)
-					outUserScalar[currentIndex] = clampValue(*d, minVal, maxVal);
-				else if (m_userAttr.type == Partio::VECTOR)		// use the norm in case of a vector
-					outUserScalar[currentIndex] = clampValue(sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]), minVal, maxVal);
+				const float *d = m_partioData->data<float>(m_userColorAttr, i);
+				if (m_userColorAttr.type == Partio::FLOAT)
+					outUserScalarColor[currentIndex] = clampValue(*d, minVal, maxVal);
+				else if (m_userColorAttr.type == Partio::VECTOR)		// use the norm in case of a vector
+					outUserScalarColor[currentIndex] = clampValue(sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]), minVal, maxVal);
 				else 
-					outUserScalar[currentIndex] = 0.0;
+					outUserScalarColor[currentIndex] = 0.0;
+			}
+
+			if (m_userRotationAttr.attributeIndex != 0xffffffff)
+			{
+				const float *r = m_partioData->data<float>(m_userRotationAttr, i);
+				if (m_userRotationAttr.type == Partio::VECTOR)
+				{
+					outUserVectorRotation[currentIndex].x = r[0];
+					outUserVectorRotation[currentIndex].y = r[1];
+					outUserVectorRotation[currentIndex].z = r[2];
+				}
+				else
+				{
+					outUserVectorRotation[currentIndex].x = 0.0;
+					outUserVectorRotation[currentIndex].y = 0.0;
+					outUserVectorRotation[currentIndex].z = 0.0;
+				}
 			}
 			currentIndex++;
 		}
@@ -299,9 +336,15 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 					outV[currentIndex].y = 0.0;
 					outV[currentIndex].z = 0.0;
 				}
-				if (m_userAttr.attributeIndex != 0xffffffff)
+				if (m_userColorAttr.attributeIndex != 0xffffffff)
 				{
-					outUserScalar[currentIndex] = 0.0;
+					outUserScalarColor[currentIndex] = 0.0;
+				}
+				if (m_userRotationAttr.attributeIndex != 0xffffffff)
+				{
+					outUserVectorRotation[currentIndex].x = 0.0;
+					outUserVectorRotation[currentIndex].y = 0.0;
+					outUserVectorRotation[currentIndex].z = 0.0;
 				}
 				currentIndex++;
 			}
@@ -311,18 +354,23 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 			part.setPerParticleAttribute("position", outX);
 		if (m_velAttr.attributeIndex != 0xffffffff)
 			part.setPerParticleAttribute("velocity", outV);
-		if (m_userAttr.attributeIndex != 0xffffffff)
-			part.setPerParticleAttribute("userScalar", outUserScalar);
+		if (m_userColorAttr.attributeIndex != 0xffffffff)
+			part.setPerParticleAttribute("userScalarColor", outUserScalarColor);
+		if (m_userRotationAttr.attributeIndex != 0xffffffff)
+			part.setPerParticleAttribute("userVectorRotation", outUserVectorRotation);
 	}
 	else
 	{ 
 		MVectorArray outX, outV;
-		MDoubleArray outUserScalar;
+		MDoubleArray outUserScalarColor;
+		MVectorArray outUserVectorRotation;
 		outX.setLength(part.count());
 		if (m_velAttr.attributeIndex != 0xffffffff)
 			outV.setLength(part.count());
-		if (m_userAttr.attributeIndex != 0xffffffff)
-			outUserScalar.setLength(part.count());
+		if (m_userColorAttr.attributeIndex != 0xffffffff)
+			outUserScalarColor.setLength(part.count());
+		if (m_userRotationAttr.attributeIndex != 0xffffffff)
+			outUserVectorRotation.setLength(part.count());
 
 		unsigned int currentIndex = 0;
  		for (int i = 0; i < (int) part.count(); i++)
@@ -348,15 +396,32 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 				outV[currentIndex].y = vel[1];
 				outV[currentIndex].z = vel[2];
 			}
-			if (m_userAttr.attributeIndex != 0xffffffff)
+			if (m_userColorAttr.attributeIndex != 0xffffffff)
 			{
-				const float *d = m_partioData->data<float>(m_userAttr, i);
-				if (m_userAttr.type == Partio::FLOAT)
-					outUserScalar[currentIndex] = clampValue(*d, minVal, maxVal);
-				else if (m_userAttr.type == Partio::VECTOR)
-					outUserScalar[currentIndex] = clampValue(sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]), minVal, maxVal);
+				const float *d = m_partioData->data<float>(m_userColorAttr, i);
+				if (m_userColorAttr.type == Partio::FLOAT)
+					outUserScalarColor[currentIndex] = clampValue(*d, minVal, maxVal);
+				else if (m_userColorAttr.type == Partio::VECTOR)
+					outUserScalarColor[currentIndex] = clampValue(sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]), minVal, maxVal);
 				else 
-					outUserScalar[currentIndex] = 0.0;
+					outUserScalarColor[currentIndex] = 0.0;
+			}
+
+			if (m_userRotationAttr.attributeIndex != 0xffffffff)
+			{
+				const float *r = m_partioData->data<float>(m_userRotationAttr, i);
+				if (m_userRotationAttr.type == Partio::VECTOR)
+				{
+					outUserVectorRotation[currentIndex].x = r[0];
+					outUserVectorRotation[currentIndex].y = r[1];
+					outUserVectorRotation[currentIndex].z = r[2];
+				}
+				else
+				{
+					outUserVectorRotation[currentIndex].x = 0.0;
+					outUserVectorRotation[currentIndex].y = 0.0;
+					outUserVectorRotation[currentIndex].z = 0.0;
+				}
 			}
 			currentIndex++;
  		}
@@ -370,10 +435,15 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 			part.setPerParticleAttribute("velocity", outV);
 			fnOutVel.setLength(numParticles - part.count());
 		}
-		if (m_userAttr.attributeIndex != 0xffffffff)
+		if (m_userColorAttr.attributeIndex != 0xffffffff)
 		{
-			part.setPerParticleAttribute("userScalar", outUserScalar);
-			fnOutUserScalar.setLength(numParticles - part.count());
+			part.setPerParticleAttribute("userScalarColor", outUserScalarColor);
+			fnOutUserScalarColor.setLength(numParticles - part.count());
+		}
+		if (m_userRotationAttr.attributeIndex != 0xffffffff)
+		{
+			part.setPerParticleAttribute("userVectorRotation", outUserVectorRotation);
+			fnOutUserVectorRotation.setLength(numParticles - part.count());
 		}
 
 		currentIndex = 0;
@@ -400,15 +470,31 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 				fnOutVel[currentIndex].y = vel[1];
 				fnOutVel[currentIndex].z = vel[2];
 			}
-			if (m_userAttr.attributeIndex != 0xffffffff)
+			if (m_userColorAttr.attributeIndex != 0xffffffff)
 			{
-				const float *d = m_partioData->data<float>(m_userAttr, i);
-				if (m_userAttr.type == Partio::FLOAT)
-					fnOutUserScalar[currentIndex] = clampValue(*d, minVal, maxVal);
-				else if (m_userAttr.type == Partio::VECTOR)
-					fnOutUserScalar[currentIndex] = clampValue(sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]), minVal, maxVal);
+				const float *d = m_partioData->data<float>(m_userColorAttr, i);
+				if (m_userColorAttr.type == Partio::FLOAT)
+					fnOutUserScalarColor[currentIndex] = clampValue(*d, minVal, maxVal);
+				else if (m_userColorAttr.type == Partio::VECTOR)
+					fnOutUserScalarColor[currentIndex] = clampValue(sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]), minVal, maxVal);
 				else 
-					fnOutUserScalar[currentIndex] = 0.0;
+					fnOutUserScalarColor[currentIndex] = 0.0;
+			}
+			if (m_userRotationAttr.attributeIndex != 0xffffffff)
+			{
+				if (m_userRotationAttr.type == Partio::VECTOR)
+				{
+					const float *r = m_partioData->data<float>(m_userRotationAttr, i);
+					fnOutUserVectorRotation[currentIndex].x = r[0];
+					fnOutUserVectorRotation[currentIndex].y = r[1];
+					fnOutUserVectorRotation[currentIndex].z = r[2];
+				}
+				else
+				{
+					fnOutUserVectorRotation[currentIndex].x = 0.0;
+					fnOutUserVectorRotation[currentIndex].y = 0.0;
+					fnOutUserVectorRotation[currentIndex].z = 0.0;
+				}
 			}
 			currentIndex++;
 		}
@@ -429,7 +515,7 @@ MStatus PartioEmitter::compute(const MPlug& plug, MDataBlock& block)
 }
 
 
-bool PartioEmitter::readParticles(const std::string &fileName, const std::string &attrName)
+bool PartioEmitter::readParticles(const std::string &fileName, const std::string &colorAttrName, const std::string &rotationAttrName)
 {
 	if (m_partioData != nullptr)
 		m_partioData->release();
@@ -438,7 +524,10 @@ bool PartioEmitter::readParticles(const std::string &fileName, const std::string
 	if (!m_partioData)
 		return false;
 
-	m_userAttr.attributeIndex = -1;
+	m_userColorAttr.attributeIndex = -1;
+	m_userRotationAttr.attributeIndex = -1;
+	m_velAttr.attributeIndex = -1;
+	m_idAttr.attributeIndex = -1;
 	for (int i = 0; i < m_partioData->numAttributes(); i++)
 	{
 		Partio::ParticleAttribute attr;
@@ -450,8 +539,10 @@ bool PartioEmitter::readParticles(const std::string &fileName, const std::string
 		else if (attr.name == "id")
 			m_idAttr = attr;
 
-		if (attr.name == attrName)
-			m_userAttr = attr;
+		if (attr.name == colorAttrName)
+			m_userColorAttr = attr;
+		if (attr.name == rotationAttrName)
+			m_userRotationAttr = attr;
 	}
 
 	MGlobal::displayInfo(MString("# particles: ") + m_partioData->numParticles());
@@ -470,8 +561,8 @@ float PartioEmitter::clampValue(const float value, const float min, const float 
 {
 	float res = (value - min) / (max - min);
 	// clamp
-	res = std::max(res, min);
-	res = std::min(res, max);
+	res = std::max(res, 0.0f);
+	res = std::min(res, 1.0f);
 	return res;
 }
 
@@ -482,7 +573,7 @@ std::string PartioEmitter::convertFileName(const std::string &inputFileName, con
 	if (pos1 == std::string::npos)
 	{
 		std::cerr << "# missing in file name.\n";
-		exit(1);
+		return "";
 	}
 	std::string::size_type pos2 = fileName.find_first_not_of("#", pos1);
 	std::string::size_type length = pos2 - pos1;

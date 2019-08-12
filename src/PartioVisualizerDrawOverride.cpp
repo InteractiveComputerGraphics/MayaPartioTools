@@ -185,14 +185,14 @@ void PartioVisualizerDrawOverride::drawSpheres() const
 	const float* partioVals = NULL;
 	glEnableVertexAttribArray(1);
 
-	if ((m_visualizer->m_userAttr.attributeIndex != -1) && (m_visualizer->m_userAttr.type == Partio::VECTOR))
+	if ((m_visualizer->m_userColorAttr.attributeIndex != -1) && (m_visualizer->m_userColorAttr.type == Partio::VECTOR))
 	{
-		partioVals = m_visualizer->m_partioData->data<float>(m_visualizer->m_userAttr, 0);
+		partioVals = m_visualizer->m_partioData->data<float>(m_visualizer->m_userColorAttr, 0);
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, &partioVals[0]);
 	}
-	else if ((m_visualizer->m_userAttr.attributeIndex != -1) && (m_visualizer->m_userAttr.type == Partio::FLOAT))
+	else if ((m_visualizer->m_userColorAttr.attributeIndex != -1) && (m_visualizer->m_userColorAttr.type == Partio::FLOAT))
 	{
-		partioVals = m_visualizer->m_partioData->data<float>(m_visualizer->m_userAttr, 0);
+		partioVals = m_visualizer->m_partioData->data<float>(m_visualizer->m_userColorAttr, 0);
 		glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 0, &partioVals[0]);
 	}
 	else
@@ -242,7 +242,7 @@ void PartioVisualizerDrawOverride::DrawCallback(const MDrawContext& context, con
 	}
 
 	bool chk = false;	
-	if ((visData->m_vis->m_userAttr.attributeIndex != -1) && (visData->m_vis->m_userAttr.type == Partio::VECTOR))
+	if ((visData->m_vis->m_userColorAttr.attributeIndex != -1) && (visData->m_vis->m_userColorAttr.type == Partio::VECTOR))
 		chk = pointShaderBegin(visData, shader_vector, world_view, proj, useTexture);
 	else
 		chk = pointShaderBegin(visData, shader_scalar, world_view, proj, useTexture);
@@ -251,7 +251,7 @@ void PartioVisualizerDrawOverride::DrawCallback(const MDrawContext& context, con
 	{
 		visData->m_visDO->drawSpheres();
 		
-		if ((visData->m_vis->m_userAttr.attributeIndex != -1) && (visData->m_vis->m_userAttr.type == Partio::VECTOR))
+		if ((visData->m_vis->m_userColorAttr.attributeIndex != -1) && (visData->m_vis->m_userColorAttr.type == Partio::VECTOR))
 			pointShaderEnd(shader_vector, useTexture);
 		else
 			pointShaderEnd(shader_scalar, useTexture);

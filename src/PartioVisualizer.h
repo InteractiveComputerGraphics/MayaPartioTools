@@ -37,12 +37,12 @@ public:
 	static MObject m_frameIndex;
 	static MObject m_color;
 	static MObject m_particleFile;
-	static MObject m_attrName;
+	static MObject m_colorAttrName;
 	static MObject m_colorMapType;
 	static MObject m_update;
 	Partio::ParticlesDataMutable* m_partioData;
 	Partio::ParticleAttribute m_posAttr;
-	Partio::ParticleAttribute m_userAttr;
+	Partio::ParticleAttribute m_userColorAttr;
 	std::vector<float> m_dummyVel;
 	MBoundingBox m_bbox;
 

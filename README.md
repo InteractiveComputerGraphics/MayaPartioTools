@@ -28,6 +28,9 @@ Just load the plugin in Plug-in Manager of Maya.
 
 Note: The plugin needs the scripts directory. So if you copy the plugin, also copy the scripts folder. 
 
+Important: 
+The following configuration should be used since otherwise Maya has problems to load the data correctly. In the menu choose "Windows -> Settings/Preferences -> Preferences". Then set "Settings/Animation -> Evaluation mode" to "DG".
+
 
 ## Usage
 
@@ -39,7 +42,7 @@ After loading the plugin a new menu appears which is called "Partio Tools". It a
 
 ### PartioVisualizerNode
 
-<img src="images/visualizer_gui.jpg" height="275"> <img src="images/visualizer.jpg" height="275">
+<img src="images/visualizer_gui.jpg" height="347"> <img src="images/visualizer.jpg" height="347">
 
 This node can visualize large sets of particles in Maya's viewport 2.0 using OpenGL and some shader programs. The PartioVisualizerNode can be used to get a quick preview of a particle file sequence.
 
@@ -56,7 +59,7 @@ This node can visualize large sets of particles in Maya's viewport 2.0 using Ope
 
 ### PartioEmitterNode
 
-<img src="images/emitter_gui.jpg" height="235"> <img src="images/emitter.jpg" height="235">
+<img src="images/emitter_gui.jpg" height="324"> <img src="images/emitter.jpg" height="324">
 
 The PartioEmitterNode imports particles from partio files in Maya. If you create a new PartioEmitterNode, the plugin will also create an nParticle node and connect both. So your particles are imported in Maya's nParticle system. 
 Moreover, an aiStandardSurface will be created and connected with a ramp that is used to color the particles. The color depends on the user-defined scalar or vector field (Attr. used for coloring).

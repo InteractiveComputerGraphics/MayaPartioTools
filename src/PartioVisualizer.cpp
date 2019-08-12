@@ -36,7 +36,7 @@ MObject PartioVisualizer::m_frameIndex;
 MObject PartioVisualizer::m_colorMapType;
 MObject PartioVisualizer::m_radius;
 MObject PartioVisualizer::m_color;
-MObject PartioVisualizer::m_attrName;
+MObject PartioVisualizer::m_colorAttrName;
 MObject PartioVisualizer::m_update;
 
 
@@ -116,13 +116,13 @@ MStatus PartioVisualizer::initialize()
 	addAttribute(m_frameIndex);
 
 	defaultString = fnStringData.create("velocity");
-	m_attrName = tAttr.create("attributeName", "aName", MFnStringData::kString, defaultString);
+	m_colorAttrName = tAttr.create("colorAttributeName", "colorAttr", MFnStringData::kString, defaultString);
 	tAttr.setReadable(true);
 	tAttr.setWritable(true);
 	tAttr.setKeyable(false);
 	tAttr.setConnectable(true);
 	tAttr.setStorable(true);
-	addAttribute(m_attrName);
+	addAttribute(m_colorAttrName);
 
 	m_color = nAttr.createColor("color", "col");
 	nAttr.setDefault(0.0f, 0.15f, 1.0f);
@@ -183,9 +183,11 @@ MStatus PartioVisualizer::compute( const MPlug& plug, MDataBlock& block)
 		{
 			MString particleFile = block.inputValue(m_particleFile).asString();
 			std::string currentFile = convertFileName(particleFile.asChar(), frameIndex);
+			if (currentFile == "")
+				return (MS::kFailure);
 			MGlobal::displayInfo(MString("Current file: ") + currentFile.c_str());
 
-			MString attrName = block.inputValue(m_attrName).asString();
+			MString attrName = block.inputValue(m_colorAttrName).asString();
 
 			readParticles(currentFile, attrName.asChar());
 			m_currentFrame = frameIndex;
@@ -244,7 +246,7 @@ std::string PartioVisualizer::convertFileName(const std::string &inputFileName, 
 	if (pos1 == std::string::npos)
 	{
 		std::cerr << "# missing in file name.\n";
-		exit(1);
+		return "";
 	}
 	std::string::size_type pos2 = fileName.find_first_not_of("#", pos1);
 	std::string::size_type length = pos2 - pos1;
@@ -263,7 +265,7 @@ bool PartioVisualizer::readParticles(const std::string &fileName, const std::str
 	if (!m_partioData)
 		return false;
 
-	m_userAttr.attributeIndex = -1;
+	m_userColorAttr.attributeIndex = -1;
 	for (int i = 0; i < m_partioData->numAttributes(); i++)
 	{
 		Partio::ParticleAttribute attr;
@@ -272,7 +274,7 @@ bool PartioVisualizer::readParticles(const std::string &fileName, const std::str
 			m_posAttr = attr;
 		
 		if (attr.name == attrName)
-			m_userAttr = attr;
+			m_userColorAttr = attr;
 	}
 
 	if (m_posAttr.attributeIndex != -1)
@@ -297,7 +299,7 @@ void PartioVisualizer::attribteNameChangedCB(MNodeMessage::AttributeMessage msg,
 	{
 		PartioVisualizer *visualizer = static_cast<PartioVisualizer*>(clientData);
 		if ((plug == PartioVisualizer::m_particleFile) ||
-			(plug == PartioVisualizer::m_attrName))
+			(plug == PartioVisualizer::m_colorAttrName))
 		{			
 			bool active = MPlug(visualizer->thisMObject(), PartioVisualizer::m_activeAttr).asBool();
 			if (!active)
@@ -307,9 +309,11 @@ void PartioVisualizer::attribteNameChangedCB(MNodeMessage::AttributeMessage msg,
 
 			MString particleFile = MPlug(visualizer->thisMObject(), PartioVisualizer::m_particleFile).asString();
 			std::string currentFile = visualizer->convertFileName(particleFile.asChar(), frameIndex);
+			if (currentFile == "")
+				return;
 			MGlobal::displayInfo(MString("Current file: ") + currentFile.c_str());
 
-			MString attrName = MPlug(visualizer->thisMObject(), PartioVisualizer::m_attrName).asString();
+			MString attrName = MPlug(visualizer->thisMObject(), PartioVisualizer::m_colorAttrName).asString();
 
 			visualizer->readParticles(currentFile, attrName.asChar());
 			visualizer->m_currentFrame = frameIndex;

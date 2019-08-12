@@ -33,7 +33,8 @@ public:
 	static MObject m_particleFileAttr;
 	static MObject m_removeParticlesAttr;
 	static MObject m_nucleusFixAttr;
-	static MObject m_attrName;
+	static MObject m_colorAttrName;
+	static MObject m_rotationAttrName;
 	static MObject m_minVal;
 	static MObject m_maxVal;
 	static MObject m_frameIndex;
@@ -44,10 +45,12 @@ protected:
 	Partio::ParticleAttribute m_posAttr;
 	Partio::ParticleAttribute m_velAttr;
 	Partio::ParticleAttribute m_idAttr;
-	Partio::ParticleAttribute m_userAttr;
+	Partio::ParticleAttribute m_userColorAttr;
+	Partio::ParticleAttribute m_userRotationAttr;
+	std::vector<unsigned int> m_id_to_index;
 	int m_currentFrame;
 
-	bool readParticles(const std::string &fileName, const std::string &attrName);
+	bool readParticles(const std::string &fileName, const std::string &colorAttrName, const std::string &rotationAttrName);
 
 	std::string convertFileName(const std::string &inputFileName, const unsigned int currentFrame);
 	std::string zeroPadding(const unsigned int number, const unsigned int length);

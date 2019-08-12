@@ -23,20 +23,25 @@ global proc createPartioEmitter()
 	setAttr ($nParticlesNodes[1] + ".color[1].color_Position") 1;
 	setAttr ($nParticlesNodes[1] + ".color[1].color_Interp") 2;
 	
-	addAttr -ln "userScalar0"  -dt doubleArray  $nParticlesNodes[1];
-	addAttr -ln "userScalar"  -dt doubleArray  $nParticlesNodes[1];	
+	addAttr -ln "userScalarColor0"  -dt doubleArray  $nParticlesNodes[1];
+	addAttr -ln "userScalarColor"  -dt doubleArray  $nParticlesNodes[1];
 	
+	addAttr -ln "userVectorRotation0"  -dt vectorArray  $nParticlesNodes[1];
+	addAttr -ln "userVectorRotation"  -dt vectorArray  $nParticlesNodes[1];	
+		
 	int $foundArnold = `pluginInfo -query -l mtoa`;
 	
 	if ($foundArnold)
 	{
-		setAttr -type "string" ($nParticlesNodes[1] + ".aiExportAttributes") userScalar;
+		setAttr -type "string" ($nParticlesNodes[1] + ".aiExportAttributes") userScalarColor;
 	
 		createAndAssignShader aiStandardSurface "";
 	
 		string $shadingGroup[] = `listConnections -type "shadingEngine" $nParticlesNodes[1]`;
 	
 		string $shader[] = `listConnections -d off -s on $shadingGroup[0]`;
+		
+		setAttr ($shader[0] + ".specular") 0;
 
 		string $rampNode = `shadingNode -asTexture ramp`;
 		setAttr ($rampNode + ".type") 1;
@@ -51,14 +56,14 @@ global proc createPartioEmitter()
 	
 		connectAttr -f ($userDataNode + ".outValue") ($rampNode + ".uCoord");
 		
-		setAttr -type "string" ($userDataNode + ".attribute") "userScalar";
+		setAttr -type "string" ($userDataNode + ".attribute") "userScalarColor";
 	}
 	else
 	{
 		print("Shaders are not created since the arnold plugin was not loaded.");
 	}
 	
-	setAttr -type "string" ($emitterNode + ".attributeName") "velocity";
+	setAttr -type "string" ($emitterNode + ".colorAttributeName") "velocity";
 	setAttr ($emitterNode + ".minVal") 0.0;
 	setAttr ($emitterNode + ".maxVal") 5.0;
 	
@@ -68,7 +73,7 @@ global proc createPartioEmitter()
 	setAttr ($nParticlesNodes[1] + ".radius") 0.025;
 	
 	expression -s ("int $cTime = `currentTime -q`;\n" + $emitterNode + ".frameIndex = $cTime;")  -o $emitterNode -ae 1 -uc all;
-	
+
 	select -r $emitterNode;
 }
 
